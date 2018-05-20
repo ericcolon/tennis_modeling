@@ -8,9 +8,10 @@ def sigmoid(x):
 
 class NonZeroLogit():
 
-    def __init__(self, lmbda=0.1, prior=0.):
+    def __init__(self, lmbda=0.1, prior=0., seed=None):
         self.lmbda = lmbda
         self.prior = prior
+        self.seed = seed
 
     @staticmethod
     def loss(beta, X, y, lmbda, prior, w):
@@ -26,6 +27,8 @@ class NonZeroLogit():
         return -(X.transpose().dot(w * (y - y_hat))) + lmbda * (beta - prior)
 
     def fit(self, X, y, sample_weight=None):
+        if self.seed is not None:
+            np.random.seed(self.seed)
         self.beta = np.random.normal(size=X.shape[1])  # Initialize randomly
         if sample_weight is None:
             w = np.ones(X.shape[0])
