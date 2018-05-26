@@ -1,3 +1,4 @@
+from fetch.defs import ROUND_MAP
 from infra.defs import DATA_DIR
 import os
 import numpy as np
@@ -16,11 +17,30 @@ def set_player_indices(df, player_mapping):
     df.loc[switch_mask, 'p1_rank'] = df.loc[switch_mask, 'lrank']
     df['p2_rank'] = df['lrank']
     df.loc[switch_mask, 'p2_rank'] = df.loc[switch_mask, 'wrank']
+
     df['p1_odds'] = df['maxw']
     df.loc[switch_mask, 'p1_odds'] = df.loc[switch_mask, 'maxl']
     df['p2_odds'] = df['maxl']
     df.loc[switch_mask, 'p2_odds'] = df.loc[switch_mask, 'maxw']
-    df['y'] = (df['winner'] == df['p1'])
+
+    df['p1_games'] = df['wgames']
+    df.loc[switch_mask, 'p1_games'] = df.loc[switch_mask, 'lgames']
+    df['p2_games'] = df['lgames']
+    df.loc[switch_mask, 'p2_games'] = df.loc[switch_mask, 'wgames']
+
+    df.loc[switch_mask, 'p2_odds'] = df.loc[switch_mask, 'maxw']
+    df['y'] = (df['winner'] == df['p1']).astype(int)
+
+
+def process_set_results(df):
+    w_set_cols = ['w%d' % s for s in range(1, 6)]
+    l_set_cols = ['l%d'% s for s in range(1, 6)]
+    set_cols = w_set_cols + l_set_cols
+    for set_col in set_cols:
+        df[set_col] = df[set_col].replace(' ',  None, inplace=False).astype(float)
+    df['wgames'] = df[w_set_cols].sum(axis=1)
+    df['lgames'] = df[l_set_cols].sum(axis=1)
+    df['total_games'] = df[set_cols].sum(axis=1)
 
 
 def get_and_save_match_result_data():
@@ -31,7 +51,14 @@ def get_and_save_match_result_data():
     ])
     print "Type converting and such..."
     df.rename(columns={x: x.lower() for x in df.columns}, inplace=True)
+    df.drop(df[df['comment'] == 'Walkover'].index, inplace=True)  # Don't train on walkovers
+    # Weird case in lsets
+    df.drop(df[df['lsets'] == '`1'].index, inplace=True)
+    df['lsets'] = df['lsets'].astype(float)
+    df['wsets'] = df['wsets'].astype(float)
+
     df.dropna(subset=['winner', 'loser'], inplace=True)
+    df['round'] = df['round'].map(lambda x: ROUND_MAP[x])
     df['wrank'].replace('NR', np.nan, inplace=True)
     df['lrank'].replace('NR', np.nan, inplace=True)
     df['wrank'] = df['wrank'].astype(float)
@@ -41,6 +68,10 @@ def get_and_save_match_result_data():
     df['winner'] = df['winner'].map(lambda x: x.strip())
     df['loser'] = df['loser'].map(lambda x: x.strip())
     df['__surface__'] = df['surface'].copy()
+    process_set_results(df)
+    # Drop rows where we don't have game totals...
+    df.drop(df[df['total_games'].isnull()].index, inplace=True)
+
     # TODO: Split out carpet court!
     df.loc[df['court'] == 'Indoor', '__surface__'] = 'Indoor'
 

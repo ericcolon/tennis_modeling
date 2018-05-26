@@ -29,7 +29,7 @@ class NonZeroLogit():
     def fit(self, X, y, sample_weight=None):
         if self.seed is not None:
             np.random.seed(self.seed)
-        self.beta = np.random.normal(size=X.shape[1])  # Initialize randomly
+        self.beta = np.zeros(X.shape[1])  # Initialize to 0
         if sample_weight is None:
             w = np.ones(X.shape[0])
         else:
@@ -39,7 +39,7 @@ class NonZeroLogit():
             x0 = self.beta,
             args = (X, y, self.lmbda, self.prior, w),
             fprime = self.fprime,
-            pgtol =  1e-3,
+            pgtol =  1e-6,
             disp = True
         )
         self.beta = result[0]
