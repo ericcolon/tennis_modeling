@@ -23,6 +23,11 @@ def set_player_indices(df, player_mapping):
     df['p2_odds'] = df['maxl']
     df.loc[switch_mask, 'p2_odds'] = df.loc[switch_mask, 'maxw']
 
+    df['p1_b365'] = df['b365w']
+    df.loc[switch_mask, 'p1_b365'] = df.loc[switch_mask, 'b365l']
+    df['p2_b365'] = df['b365l']
+    df.loc[switch_mask, 'p2_b365'] = df.loc[switch_mask, 'b365w']
+
     df['p1_games'] = df['wgames']
     df.loc[switch_mask, 'p1_games'] = df.loc[switch_mask, 'lgames']
     df['p2_games'] = df['lgames']
@@ -51,7 +56,7 @@ def get_and_save_match_result_data():
     ])
     print "Type converting and such..."
     df.rename(columns={x: x.lower() for x in df.columns}, inplace=True)
-    df.drop(df[df['comment'] == 'Walkover'].index, inplace=True)  # Don't train on walkovers
+    df.drop(df[df['comment'] == 'Walkover'].index, inplace=True)  # Don't train/test on walkovers
     # Weird case in lsets
     df.drop(df[df['lsets'] == '`1'].index, inplace=True)
     df['lsets'] = df['lsets'].astype(float)
@@ -71,7 +76,6 @@ def get_and_save_match_result_data():
     process_set_results(df)
     # Drop rows where we don't have game totals...
     df.drop(df[df['total_games'].isnull()].index, inplace=True)
-
     # TODO: Split out carpet court!
     df.loc[df['court'] == 'Indoor', '__surface__'] = 'Indoor'
 
@@ -80,7 +84,7 @@ def get_and_save_match_result_data():
     inverse_player_mapping = dict(list(enumerate(player_set)))
     player_mapping = {v: k for k, v in inverse_player_mapping.iteritems()}
 
-    print "Moving away from winner and loser..."
+    print "Setting p1 and p2 instead of winner and loser..."
     set_player_indices(df, player_mapping)
     df.sort_values(by='date', inplace=True)
     target_dir = os.path.join(DATA_DIR, 'parsed_match_results')

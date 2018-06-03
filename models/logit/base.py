@@ -6,6 +6,7 @@ import os
 
 
 def _get_sparse_X(df, n_players):
+    # Creates sparse matrix with which player indices are active
     n = df.shape[0]
     p1_data = np.ones(n)
     p1_row = np.arange(n)
@@ -42,11 +43,12 @@ def _get_weights(cur_time, train_df, halflife):
         weights = np.exp(-lamb * days_ago.astype(float))
     return weights
 
-def sipko_weights(cur_date, train_df, disc, flat_time=1.):
+def sipko_weights(cur_date, train_df, disc, date_col='date', flat_time=1.):
+    # Needs to be sorted prior to using
     # These are the time decay weights used in the paper.
     # min(disc ^ (# years elapsed), disc ^ (flat_time))
     max_weight = disc ** flat_time
-    days_ago = (pd.to_datetime(cur_date) - train_df['date']).map(lambda x: x.days)
+    days_ago = (pd.to_datetime(cur_date) - train_df[date_col]).map(lambda x: x.days)
     years_ago = days_ago / 365.
     weights = disc ** years_ago
     return weights.clip(upper=max_weight)

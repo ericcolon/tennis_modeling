@@ -12,3 +12,4 @@
 * NOTE: Results look better than they actually are, because I've removed retirements and walkovers from test sets
 * Head-to-head features
 * Other features
+* Figure out 3 vs. 5 set matches
