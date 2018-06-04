@@ -33,10 +33,10 @@ def set_player_indices(df, player_mapping):
     df['p2_games'] = df['lgames']
     df.loc[switch_mask, 'p2_games'] = df.loc[switch_mask, 'wgames']
 
-    df['p1_name'] = df['winner_name']
-    df.loc[switch_mask, 'p1_name'] = df.loc[switch_mask, 'loser_name']
-    df['p2_name'] = df['loser_name']
-    df.loc[switch_mask, 'p2_name'] = df.loc[switch_mask, 'winner_name']
+    df['p1_name'] = df['winner']
+    df.loc[switch_mask, 'p1_name'] = df.loc[switch_mask, 'loser']
+    df['p2_name'] = df['loser']
+    df.loc[switch_mask, 'p2_name'] = df.loc[switch_mask, 'winner']
 
     df.loc[switch_mask, 'p2_odds'] = df.loc[switch_mask, 'maxw']
     df['y'] = (df['winner'] == df['p1']).astype(int)
@@ -91,7 +91,7 @@ def get_and_save_match_result_data():
 
     print "Setting p1 and p2 instead of winner and loser..."
     set_player_indices(df, player_mapping)
-    df.sort_values(by='date', inplace=True)
+    df.sort_values(by=['date', 'tournament', 'round'], inplace=True)
     target_dir = os.path.join(DATA_DIR, 'parsed_match_results')
     if not os.path.exists(
         target_dir
@@ -110,7 +110,8 @@ def read_joined():
     )
     df['date'] = pd.to_datetime(df['date'])
     player_mapping = json.load(open(os.path.join(target_dir, 'player_mapping.json')))
-    inverse_player_mapping = json.load(open(os.path.join(target_dir, 'inverse_player_mapping.json')))
+    inverse_player_mapping = {v: k for k, v in player_mapping.iteritems()}
+    # inverse_player_mapping = json.load(open(os.path.join(target_dir, 'inverse_player_mapping.json')))
     return df, player_mapping, inverse_player_mapping
 
 
