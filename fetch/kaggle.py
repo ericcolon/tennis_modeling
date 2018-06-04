@@ -14,6 +14,7 @@ def _create_frac(_df, prefix, feat, denom):
         _df['%s_%s' % (prefix, denom)]
     )
 
+
 def create_pct_features(_df):
     # Create percentage features
     for feat, denom, new_name in [
@@ -31,6 +32,7 @@ def create_pct_features(_df):
                 feat,
                 denom
             )
+
 
 def preprocess(_df):
     # Creates new features that are differences of other features
@@ -87,7 +89,7 @@ def parse_atp_data():
         df.loc[switch_mask, 'p1_%s' % col] = df.loc[switch_mask, 'l_%s' % col]
         df['p2_%s' % col] = df['l_%s' % col]
         df.loc[switch_mask, 'p2_%s' % col] = df.loc[switch_mask, 'w_%s' % col]
-    df['y'] = (df['winner_id'] == df['p1_id'])
+    df['y'] = (df['winner_id'] == df['p1_id']).astype(int)
     df['match_id'] = range(df.shape[0])
     return df
 
