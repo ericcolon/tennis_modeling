@@ -33,16 +33,21 @@ def set_player_indices(df, player_mapping):
     df['p2_games'] = df['lgames']
     df.loc[switch_mask, 'p2_games'] = df.loc[switch_mask, 'wgames']
 
+    df['p1_name'] = df['winner_name']
+    df.loc[switch_mask, 'p1_name'] = df.loc[switch_mask, 'loser_name']
+    df['p2_name'] = df['loser_name']
+    df.loc[switch_mask, 'p2_name'] = df.loc[switch_mask, 'winner_name']
+
     df.loc[switch_mask, 'p2_odds'] = df.loc[switch_mask, 'maxw']
     df['y'] = (df['winner'] == df['p1']).astype(int)
 
 
 def process_set_results(df):
     w_set_cols = ['w%d' % s for s in range(1, 6)]
-    l_set_cols = ['l%d'% s for s in range(1, 6)]
+    l_set_cols = ['l%d' % s for s in range(1, 6)]
     set_cols = w_set_cols + l_set_cols
     for set_col in set_cols:
-        df[set_col] = df[set_col].replace(' ',  None, inplace=False).astype(float)
+        df[set_col] = df[set_col].replace(' ', None, inplace=False).astype(float)
     df['wgames'] = df[w_set_cols].sum(axis=1)
     df['lgames'] = df[l_set_cols].sum(axis=1)
     df['total_games'] = df[set_cols].sum(axis=1)
