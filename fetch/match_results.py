@@ -53,6 +53,87 @@ def process_set_results(df):
     df['total_games'] = df[set_cols].sum(axis=1)
 
 
+def featurize_fatigue_for_player(df, player, num_days=3):
+    '''
+    Featurizes fatigue for a single player
+    <num_days>: Number of days before current match that count towards "fatigue"
+    '''
+    print "Featurizing %s..." % player
+    player_df = df[
+        (df['loser'] == player) |
+        (df['winner'] == player)
+    ].copy()
+
+    player_df['last_retired'] = (
+        (player_df['loser'] == player) &
+        (player_df['comment'] == 'Retired')
+    ).astype(int).shift(1)
+    player_df['last_retired'].fillna(0, inplace=True)
+    player_df.index = pd.to_datetime(player_df['date'])
+
+    player_df['__count__'] = 1
+    player_df['fatigue_matches'] = player_df.rolling('%dd' % num_days)['__count__'].sum() - 1
+    player_df['fatigue_matches'] = player_df['fatigue_matches'].clip(lower=0.)
+
+    # Subtract current games because rolling sum includes them...
+    player_df['fatigue_games'] = player_df.rolling('%dd' % num_days)['total_games'].sum() - player_df['total_games']
+
+    player_df['player'] = player
+
+    player_df['time_since_last_match'] = player_df['date'].diff().map(
+        lambda x: np.nan if pd.isnull(x) else x.days
+    ).astype(float)
+
+    return player_df[[
+        'player',
+        'match_id',
+        'last_retired',
+        'fatigue_matches',
+        'fatigue_games',
+        'time_since_last_match'
+    ]]
+
+
+def add_fatigue_features(df, comeback_def=20):
+    '''
+    Adds fatigue features
+    <comeback_def>: How many days it needs to be since last match to be considered a "comeback"
+    '''
+    all_players = sorted(set(df['winner']) | set(df['loser']))
+    player_dfs = [
+        featurize_fatigue_for_player(df, p) for p in all_players
+    ]
+    player_feats = pd.concat(player_dfs)
+    assert player_feats.shape[0] == df.shape[0] * 2
+    # Merge in player feats
+    feats = [col for col in player_feats.columns if col not in ('match_id', 'player')]  # TODO: Clean this hacky line up
+    df = pd.merge(
+        df,
+        player_feats,
+        left_on=['match_id', 'p1'],
+        right_on=['match_id', 'player']
+    )
+    df.rename(columns={f: 'p1_%s' % f for f in feats}, inplace=True)
+    df = pd.merge(
+        df,
+        player_feats,
+        left_on=['match_id', 'p2'],
+        right_on=['match_id', 'player']
+    )
+    df.rename(columns={f: 'p2_%s' % f for f in feats}, inplace=True)
+
+    # Get diffs...
+    df['fatigue_diff'] = df['p1_fatigue_matches'] - df['p2_fatigue_matches']
+    df['fatigue_games_diff'] = df['p1_fatigue_games'] - df['p2_fatigue_games']
+    df['time_diff'] = df['p1_time_since_last_match'] - df['p2_time_since_last_match']
+    df['time_diff'].fillna(0, inplace=True)
+    df['comeback_diff'] = 0
+    df.loc[df['time_diff'] > comeback_def, 'comeback_diff'] = 1
+    df.loc[df['time_diff'] < -comeback_def, 'comeback_diff'] = -1
+    df['retire_diff'] = df['p1_last_retired'] - df['p2_last_retired']
+    return df
+
+
 def get_and_save_match_result_data():
     match_result_dir = os.path.join(DATA_DIR, 'match_results')
     print "Reading initial data..."
@@ -92,6 +173,9 @@ def get_and_save_match_result_data():
     print "Setting p1 and p2 instead of winner and loser..."
     set_player_indices(df, player_mapping)
     df.sort_values(by=['date', 'tournament', 'round'], inplace=True)
+
+    df = add_fatigue_features(df)
+
     target_dir = os.path.join(DATA_DIR, 'parsed_match_results')
     if not os.path.exists(
         target_dir
