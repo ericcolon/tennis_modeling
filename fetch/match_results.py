@@ -125,6 +125,8 @@ def add_fatigue_features(df, comeback_def=20):
     # Get diffs...
     df['fatigue_diff'] = df['p1_fatigue_matches'] - df['p2_fatigue_matches']
     df['fatigue_games_diff'] = df['p1_fatigue_games'] - df['p2_fatigue_games']
+    df['fatigue_diff*best_of_5'] = df['fatigue_diff'] * df['best_of_5']
+    df['fatigue_games_diff*best_of_5'] = df['fatigue_games_diff'] * df['best_of_5']
     df['time_diff'] = df['p1_time_since_last_match'] - df['p2_time_since_last_match']
     df['time_diff'].fillna(0, inplace=True)
     df['comeback_diff'] = 0
@@ -159,6 +161,7 @@ def get_and_save_match_result_data():
     df['winner'] = df['winner'].map(lambda x: x.strip())
     df['loser'] = df['loser'].map(lambda x: x.strip())
     df['__surface__'] = df['surface'].copy()
+    df['best_of_5'] = (df['best of'] == 5).astype(int)
     process_set_results(df)
     # Drop rows where we don't have game totals...
     df.drop(df[df['total_games'].isnull()].index, inplace=True)
